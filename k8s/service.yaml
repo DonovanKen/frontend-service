@@ -6,10 +6,10 @@ metadata:
   labels:
     app: frontend-app
 spec:
-  type: NodePort  # Change from LoadBalancer to NodePort
+  type: NodePort
   selector:
     app: frontend-app
   ports:
   - port: 5000
     targetPort: 5000
-    nodePort: 5000  # Fixed port 5000
+    nodePort: 5000
