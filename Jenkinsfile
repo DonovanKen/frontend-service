@@ -38,15 +38,18 @@ pipeline {
         steps {
             script {
                 sh """
+                    echo "Cleaning up any existing containers..."
+                    docker rm -f ${params.CONTAINER_FRONTEND} 2>/dev/null || true
+                    docker rm -f ${params.CONTAINER_FRONTEND}-test 2>/dev/null || true
+                    
                     echo "Testing frontend container..."
-                    docker rm -f ${params.CONTAINER_FRONTEND} || true
-                    docker run -d -p 5000:5000 --name ${params.CONTAINER_FRONTEND} ${params.FRONTEND}:${params.IMAGE_TAG}
+                    docker run -d -p 5000:5000 --name ${params.CONTAINER_FRONTEND}-test ${params.FRONTEND}:${params.IMAGE_TAG}
                     docker ps
                     sleep 10
                     echo "Testing frontend container..."
                     curl -f http://localhost:5000/health || curl -I http://localhost:5000 || echo "Frontend health check completed"
-                    echo "Cleaning up frontend container..."
-                    docker rm -f ${params.CONTAINER_FRONTEND}
+                    echo "Cleaning up test container..."
+                    docker rm -f ${params.CONTAINER_FRONTEND}-test
                     echo "Frontend test completed..."
                 """
             }
@@ -96,7 +99,10 @@ pipeline {
     post {
         always {
             echo 'Pipeline completed - check Kubernetes deployment status'
-            sh "docker rm -f ${params.CONTAINER_FRONTEND} || true"
+            sh """
+                docker rm -f ${params.CONTAINER_FRONTEND} 2>/dev/null || true
+                docker rm -f ${params.CONTAINER_FRONTEND}-test 2>/dev/null || true
+            """
         }
         success {
             echo 'Frontend service deployed successfully to Kubernetes!'
