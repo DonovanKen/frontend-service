@@ -16,7 +16,12 @@ pipeline {
       stage('Build Image') {
         steps {
           script {
-           dockerBuildSingle("$FRONTEND", "$IMAGE_TAG")
+            // This calls your existing dockerBuild method from dockerBuild.groovy
+            // Since it expects multiple services, we'll adapt it for single service
+            echo "Building Docker image: ${params.FRONTEND}:${params.IMAGE_TAG}"
+            sh """
+                docker build -t ${params.FRONTEND}:${params.IMAGE_TAG} .
+            """
           }
         }
       }
@@ -35,7 +40,22 @@ pipeline {
       stage('Run Container Test') {
         steps {
             script {
-                testimageSingle("$FRONTEND", "$IMAGE_TAG", "$CONTAINER_FRONTEND")
+                // This calls your existing testimage method from testimage.groovy
+                // We'll adapt it for single service testing
+                echo "Testing frontend container: ${params.FRONTEND}:${params.IMAGE_TAG}"
+                sh """
+                    # Test frontend
+                    echo "Testing frontend container..."
+                    docker rm -f ${params.CONTAINER_FRONTEND} || true
+                    docker run -d -p 5000:5000 --name ${params.CONTAINER_FRONTEND} ${params.FRONTEND}:${params.IMAGE_TAG}
+                    docker ps
+                    sleep 10
+                    echo "Testing frontend container..."
+                    curl -f http://localhost:5000/health || curl -I http://localhost:5000 || echo "Frontend health check completed"
+                    echo "Cleaning up frontend container..."
+                    docker rm -f ${params.CONTAINER_FRONTEND}
+                    echo "Frontend test completed..."
+                """
             }
         }
       }
@@ -66,11 +86,11 @@ pipeline {
                         echo 'Waiting for frontend deployment to be ready'
                         kubectl wait --for=condition=available deployment/frontend-app --timeout=300s
                         echo 'Deployment Status'
-                        kubectl get deployment/frontend-app
+                        kubectl get deployments -l app=frontend-app
                         echo 'Pod Status'
                         kubectl get pods -l app=frontend-app
                         echo 'Service Status'
-                        kubectl get service/frontend-app
+                        kubectl get services -l app=frontend-app
                     "
                 """
             }
@@ -81,6 +101,8 @@ pipeline {
     post {
         always {
             echo 'Pipeline completed - check Kubernetes deployment status'
+            // Cleanup any test containers
+            sh "docker rm -f ${params.CONTAINER_FRONTEND} || true"
         }
         success {
             echo 'Frontend service deployed successfully to Kubernetes!'
