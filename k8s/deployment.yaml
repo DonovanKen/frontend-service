@@ -2,8 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-app
-  namespace: microservices
-  labels:
+  labels:           # ← Remove namespace from here
     app: frontend-app
 spec:
   replicas: 2
