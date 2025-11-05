@@ -2,7 +2,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: frontend-app
-  labels:           # ← Remove namespace from here
+  namespace: microservices
+  labels:
     app: frontend-app
 spec:
   selector:
@@ -10,4 +11,5 @@ spec:
   ports:
   - port: 5000
     targetPort: 5000
-  type: LoadBalancer
+    nodePort: 5000  # Fixed port 5000 for production
+  type: NodePort    # Use NodePort for direct access

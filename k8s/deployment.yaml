@@ -2,10 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-app
-  labels:           # ← Remove namespace from here
+  namespace: microservices
+  labels:
     app: frontend-app
 spec:
-  replicas: 2
+  replicas: 3  # Increase replicas for production
   selector:
     matchLabels:
       app: frontend-app
@@ -26,3 +27,22 @@ spec:
           value: "http://product-api:5002"
         - name: ORDER_SERVICE_URL
           value: "http://order-api:5003"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
