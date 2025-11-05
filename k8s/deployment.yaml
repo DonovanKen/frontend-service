@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend-app  # Matching docker-compose service name
+  name: frontend-app
   namespace: microservices
   labels:
-    app: frontend-app  # Same as container name in docker-compose
+    app: frontend-app
 spec:
   replicas: 2
   selector:
@@ -16,34 +16,14 @@ spec:
         app: frontend-app
     spec:
       containers:
-      - name: frontend-app  # Same as docker-compose container_name
+      - name: frontend-app
         image: mrkendono/frontend:latest
-        imagePullPolicy: Always
         ports:
         - containerPort: 5000
         env:
         - name: USER_SERVICE_URL
-          value: "http://user-api:5001"  # Same as docker-compose service name
+          value: "http://user-api:5001"
         - name: PRODUCT_SERVICE_URL
-          value: "http://product-api:5002"  # Same as docker-compose service name
+          value: "http://product-api:5002"
         - name: ORDER_SERVICE_URL
-          value: "http://order-api:5003"  # Same as docker-compose service name
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 5000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 5000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          value: "http://order-api:5003"
