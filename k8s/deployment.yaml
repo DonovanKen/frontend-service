@@ -22,11 +22,11 @@ spec:
         - containerPort: 5000
         env:
         - name: USER_SERVICE_URL
-          value: "http://user-api:5001"
-        - name: PRODUCT_SERVICE_URL
-          value: "http://product-api:5002"
+          value: "http://user-api.microservices:5001"
+        - name: PRODUCT_SERVICE_URL  
+          value: "http://product-api.microservices:5002"
         - name: ORDER_SERVICE_URL
-          value: "http://order-api:5003"
+          value: "http://order-api.microservices:5003"
         resources:
           requests:
             memory: "256Mi"
