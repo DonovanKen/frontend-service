@@ -1,48 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend-app
-  namespace: microservices
-  labels:
-    app: frontend-app
+  name: cfrontend-app
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
-      app: frontend-app
+      app: cfrontend-app
   template:
     metadata:
       labels:
-        app: frontend-app
+        app: cfrontend-app
     spec:
       containers:
-      - name: frontend-app
-        image: mrkendono/frontend:latest
-        ports:
-        - containerPort: 5000
-        env:
-        - name: USER_SERVICE_URL
-          value: "http://user-api.microservices:5001"
-        - name: PRODUCT_SERVICE_URL  
-          value: "http://product-api.microservices:5002"
-        - name: ORDER_SERVICE_URL
-          value: "http://order-api.microservices:5003"
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 5000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 5000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: cfrontend-app
+          image: mrkendono/frontend:latest
+          ports:
+            - containerPort: 5000
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+              
+              
+          
