@@ -10,7 +10,7 @@ pipeline {
        string(name: 'GITHUB_USER', defaultValue: 'DonovanKen', description: 'user')
        string(name: 'DOCKERHUB_USER', defaultValue: 'mrkendono', description: 'docker hub')
        string(name: 'K8S_NAMESPACE', defaultValue: 'microservices', description: 'Kubernetes namespace')
-       string(name: 'WORKER_NODE', defaultValue: 'client1', description: 'Worker node name')  # ⬅️ CORRIGER: utiliser 'client1' au lieu de l'IP
+       string(name: 'WORKER_NODE', defaultValue: 'client1', description: 'Worker node name')
     }
     
     stages {
@@ -67,47 +67,39 @@ pipeline {
                 '''
                 
                 sh """
-                    # Create directory on remote server first
                     ssh -o StrictHostKeyChecking=no kubernetes@192.168.2.88 'mkdir -p /tmp/k8s-frontend/'
                     
-                    # Copy k8s manifests to target server
                     scp -r k8s/ kubernetes@192.168.2.88:/tmp/k8s-frontend/
                     
-                    # Deploy to Kubernetes
                     ssh kubernetes@192.168.2.88 "
                         cd /tmp/k8s-frontend/k8s
-                        echo '=== DEBUG: Current directory and files ==='
-                        pwd
-                        ls -la
                         echo 'Creating namespace if it does not exist'
                         kubectl create namespace ${params.K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
                         
-                        # Label the worker node if not already done
-                        echo '=== Labeling Worker Node ==='
+                        echo 'Labeling Worker Node'
                         kubectl label nodes ${params.WORKER_NODE} app=microservices --overwrite
                         
-                        # Deploy frontend service
-                        echo '=== Deploying Frontend ==='
+                        echo 'Deploying Frontend'
                         kubectl apply -f deployment.yaml -n ${params.K8S_NAMESPACE}
                         kubectl apply -f service.yaml -n ${params.K8S_NAMESPACE}
                         
                         echo 'Waiting for frontend deployment to be ready'
                         kubectl wait --for=condition=available deployment/cfrontend-app -n ${params.K8S_NAMESPACE} --timeout=300s
                         
-                        echo '=== Testing Frontend Connectivity ==='
+                        echo 'Testing Frontend Connectivity'
                         kubectl exec deployment/cfrontend-app -n ${params.K8S_NAMESPACE} -- curl -f http://localhost:5000/ || echo 'Frontend connectivity test completed'
                         
-                        echo '=== Final Deployment Status ==='
+                        echo 'Final Deployment Status'
                         kubectl get all -n ${params.K8S_NAMESPACE}
                         
-                        echo '=== Service Details ==='
+                        echo 'Service Details'
                         kubectl get svc -n ${params.K8S_NAMESPACE}
                         
-                        echo '=== Pod Distribution ==='
+                        echo 'Pod Distribution'
                         kubectl get pods -n ${params.K8S_NAMESPACE} -o wide
                         
-                        echo '=== Testing External Access ==='
-                        curl -v http://192.168.2.87:30009/ || echo 'External access test completed'  # ⬅️ Garder l'IP pour l'accès externe
+                        echo 'Testing External Access'
+                        curl -v http://192.168.2.87:30009/ || echo 'External access test completed'
                     "
                 """
             }
