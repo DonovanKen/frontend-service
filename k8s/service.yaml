@@ -3,12 +3,10 @@ kind: Service
 metadata:
   name: cfrontend-app
   namespace: microservices
-  labels:
-    app: cfrontend-app      # ⬅️ CORRIGER le label
 spec:
   type: NodePort
   selector:
-    app: cfrontend-app      # ⬅️ CORRIGER pour matcher le déploiement
+    app: cfrontend-app
   ports:
   - protocol: TCP
     port: 5000

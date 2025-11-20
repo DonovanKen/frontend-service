@@ -10,7 +10,6 @@ pipeline {
        string(name: 'GITHUB_USER', defaultValue: 'DonovanKen', description: 'user')
        string(name: 'DOCKERHUB_USER', defaultValue: 'mrkendono', description: 'docker hub')
        string(name: 'K8S_NAMESPACE', defaultValue: 'microservices', description: 'Kubernetes namespace')
-       string(name: 'WORKER_NODE', defaultValue: 'client1', description: 'Worker node name')
     }
     
     stages {
@@ -42,16 +41,15 @@ pipeline {
                     echo "Cleaning up any existing containers..."
                     docker rm -f ${params.CONTAINER_FRONTEND} 2>/dev/null || true
                     docker rm -f ${params.CONTAINER_FRONTEND}-test 2>/dev/null || true
-                    docker rm -f ${params.CONTAINER_FRONTEND}-${BUILD_NUMBER} 2>/dev/null || true
                     
                     echo "Testing frontend container..."
-                    docker run -d -p 5000:5000 --name ${params.CONTAINER_FRONTEND}-${BUILD_NUMBER} ${params.FRONTEND}:${params.IMAGE_TAG}
+                    docker run -d -p 5000:5000 --name ${params.CONTAINER_FRONTEND}-test ${params.FRONTEND}:${params.IMAGE_TAG}
                     docker ps
                     sleep 10
                     echo "Testing frontend container..."
                     curl -f http://localhost:5000/ || curl -I http://localhost:5000 || echo "Frontend connectivity check completed"
                     echo "Cleaning up test container..."
-                    docker rm -f ${params.CONTAINER_FRONTEND}-${BUILD_NUMBER}
+                    docker rm -f ${params.CONTAINER_FRONTEND}-test
                     echo "Frontend test completed..."
                 """
             }
@@ -67,39 +65,29 @@ pipeline {
                 '''
                 
                 sh """
+                    # Create directory on remote server first
                     ssh -o StrictHostKeyChecking=no kubernetes@192.168.2.88 'mkdir -p /tmp/k8s-frontend/'
                     
+                    # Copy k8s manifests to target server
                     scp -r k8s/ kubernetes@192.168.2.88:/tmp/k8s-frontend/
                     
+                    # Deploy to Kubernetes
                     ssh kubernetes@192.168.2.88 "
                         cd /tmp/k8s-frontend/k8s
+                        echo '=== DEBUG: Current directory and files ==='
+                        pwd
+                        ls -la
+                        echo '=== DEBUG: File contents ==='
+                        cat deployment.yaml
+                        cat service.yaml
                         echo 'Creating namespace if it does not exist'
                         kubectl create namespace ${params.K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
-                        
-                        echo 'Labeling Worker Node'
-                        kubectl label nodes ${params.WORKER_NODE} app=microservices --overwrite
-                        
-                        echo 'Deploying Frontend'
-                        kubectl apply -f deployment.yaml -n ${params.K8S_NAMESPACE}
-                        kubectl apply -f service.yaml -n ${params.K8S_NAMESPACE}
-                        
+                        echo 'Applying Kubernetes manifests'
+                        kubectl apply -f . -n ${params.K8S_NAMESPACE}
                         echo 'Waiting for frontend deployment to be ready'
                         kubectl wait --for=condition=available deployment/cfrontend-app -n ${params.K8S_NAMESPACE} --timeout=300s
-                        
-                        echo 'Testing Frontend Connectivity'
-                        kubectl exec deployment/cfrontend-app -n ${params.K8S_NAMESPACE} -- curl -f http://localhost:5000/ || echo 'Frontend connectivity test completed'
-                        
-                        echo 'Final Deployment Status'
+                        echo '=== Final Deployment Status ==='
                         kubectl get all -n ${params.K8S_NAMESPACE}
-                        
-                        echo 'Service Details'
-                        kubectl get svc -n ${params.K8S_NAMESPACE}
-                        
-                        echo 'Pod Distribution'
-                        kubectl get pods -n ${params.K8S_NAMESPACE} -o wide
-                        
-                        echo 'Testing External Access'
-                        curl -v http://192.168.2.87:30009/ || echo 'External access test completed'
                     "
                 """
             }
@@ -113,11 +101,10 @@ pipeline {
             sh """
                 docker rm -f ${params.CONTAINER_FRONTEND} 2>/dev/null || true
                 docker rm -f ${params.CONTAINER_FRONTEND}-test 2>/dev/null || true
-                docker rm -f ${params.CONTAINER_FRONTEND}-${BUILD_NUMBER} 2>/dev/null || true
             """
         }
         success {
-            echo 'Frontend deployed successfully to Kubernetes worker node!'
+            echo 'Frontend service deployed successfully to Kubernetes!'
         }
         failure {
             echo 'Deployment failed - check Kubernetes logs'
