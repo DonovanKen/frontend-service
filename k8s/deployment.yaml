@@ -2,21 +2,33 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cfrontend-app
+  namespace: microservices  # ⬅️ AJOUTER le namespace
+  labels:
+    app: cfrontend-app      # ⬅️ CORRIGER le label
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: cfrontend-app
+      app: cfrontend-app    # ⬅️ CORRIGER pour matcher le template
   template:
     metadata:
       labels:
-        app: cfrontend-app
+        app: cfrontend-app  # ⬅️ CORRIGER le label
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: client1  # ⬅️ AJOUTER pour déployer sur client1
       containers:
         - name: cfrontend-app
           image: mrkendono/frontend:latest
           ports:
             - containerPort: 5000
+          env:              # ⬅️ AJOUTER les variables d'environnement
+          - name: USER_SERVICE_URL
+            value: "http://user-api:5001"
+          - name: PRODUCT_SERVICE_URL
+            value: "http://product-api:5002"
+          - name: ORDER_SERVICE_URL
+            value: "http://order-api:5003"
           resources:
             requests:
               cpu: "100m"
@@ -24,6 +36,15 @@ spec:
             limits:
               cpu: "250m"
               memory: "256Mi"
-              
-              
-          
+          livenessProbe:    # ⬅️ AJOUTER les health checks
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5

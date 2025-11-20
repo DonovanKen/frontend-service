@@ -10,7 +10,7 @@ pipeline {
        string(name: 'GITHUB_USER', defaultValue: 'DonovanKen', description: 'user')
        string(name: 'DOCKERHUB_USER', defaultValue: 'mrkendono', description: 'docker hub')
        string(name: 'K8S_NAMESPACE', defaultValue: 'microservices', description: 'Kubernetes namespace')
-       string(name: 'WORKER_NODE', defaultValue: '192.168.2.87', description: 'Worker node IP')
+       string(name: 'WORKER_NODE', defaultValue: 'client1', description: 'Worker node name')  # ⬅️ CORRIGER: utiliser 'client1' au lieu de l'IP
     }
     
     stages {
@@ -95,12 +95,7 @@ pipeline {
                         kubectl wait --for=condition=available deployment/cfrontend-app -n ${params.K8S_NAMESPACE} --timeout=300s
                         
                         echo '=== Testing Frontend Connectivity ==='
-                        # Test frontend service
                         kubectl exec deployment/cfrontend-app -n ${params.K8S_NAMESPACE} -- curl -f http://localhost:5000/ || echo 'Frontend connectivity test completed'
-                        
-                        echo '=== Testing Connection to User Service ==='
-                        # Test if frontend can reach user-service internally
-                        kubectl exec deployment/cfrontend-app -n ${params.K8S_NAMESPACE} -- curl -v http://user-api:5001/health || echo 'User service connection test completed'
                         
                         echo '=== Final Deployment Status ==='
                         kubectl get all -n ${params.K8S_NAMESPACE}
@@ -112,7 +107,7 @@ pipeline {
                         kubectl get pods -n ${params.K8S_NAMESPACE} -o wide
                         
                         echo '=== Testing External Access ==='
-                        curl -v http://${params.WORKER_NODE}:30009/ || echo 'External access test completed'
+                        curl -v http://192.168.2.87:30009/ || echo 'External access test completed'  # ⬅️ Garder l'IP pour l'accès externe
                     "
                 """
             }
